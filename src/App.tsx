@@ -1,35 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import "./App.css";
+import { FolderListingOAuth } from "./components/FolderListingOAuth";
+import { SimpleGoogleLogin } from "./components/SimpleGoogleLogin";
+import {
+  GoogleAuthProvider,
+  useGoogleAuth,
+} from "./contexts/GoogleAuthContext";
 
-function App() {
-  const [count, setCount] = useState(0)
+function AppContent() {
+  const { credential, accessToken, decodedToken, logout } = useGoogleAuth();
+
+  if (!credential || !decodedToken) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <div className="logo-section">
+              <h1 className="app-title">QueroAulas 🎓</h1>
+              <p className="app-subtitle">Acesse suas aulas do Google Drive</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="app-main">
+          <div className="welcome-section">
+            <div className="welcome-content">
+              <span className="welcome-icon">🔐</span>
+              <h2>Login com Google</h2>
+              <p>Faça login para acessar suas pastas do Drive</p>
+              <div className="features">
+                <div className="feature">
+                  <span>📁</span>
+                  <span>Acesse pastas do Google Drive</span>
+                </div>
+                <div className="feature">
+                  <span>🎥</span>
+                  <span>Visualize seus vídeos</span>
+                </div>
+                <div className="feature">
+                  <span>✅</span>
+                  <span>Organize seus cursos</span>
+                </div>
+              </div>
+              <SimpleGoogleLogin />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app">
+      <header className="app-header">
+        <div className="header-content">
+          <div className="logo-section">
+            <h1 className="app-title">QueroAulas 🎓</h1>
+            <p className="app-subtitle">
+              Transforme suas pastas do Drive em cursos
+            </p>
+          </div>
+          <button onClick={logout} className="logout-btn">
+            Sair
+          </button>
+        </div>
+      </header>
+
+      <main className="app-main">
+        <FolderListingOAuth
+          accessToken={accessToken}
+          userEmail={decodedToken.email}
+        />
+      </main>
+    </div>
+  );
 }
 
-export default App
+function App() {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  return (
+    <GoogleOAuthProvider clientId={clientId}>
+      <GoogleAuthProvider>
+        <AppContent />
+      </GoogleAuthProvider>
+    </GoogleOAuthProvider>
+  );
+}
+
+export default App;
