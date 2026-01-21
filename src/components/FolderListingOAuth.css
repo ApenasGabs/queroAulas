@@ -176,10 +176,20 @@
   transition: all 0.2s ease;
 }
 
+.file-item-row.clickable {
+  cursor: pointer;
+}
+
 .file-item-row:hover {
   background: var(--surface-hover);
   border-color: var(--border);
   transform: translateX(2px);
+}
+
+.file-item-row.clickable:hover {
+  background: rgba(26, 115, 232, 0.1);
+  border-color: var(--primary-color);
+  transform: translateX(4px);
 }
 
 .file-group h3 {

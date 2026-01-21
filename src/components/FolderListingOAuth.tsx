@@ -7,6 +7,7 @@ import {
   listFolderTree,
 } from "../services/apiService";
 import "./FolderListingOAuth.css";
+import { VideoPlayer } from "./VideoPlayer";
 
 interface FolderListingOAuthProps {
   accessToken: string | null;
@@ -22,6 +23,7 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
   const [tree, setTree] = useState<DriveNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedVideo, setSelectedVideo] = useState<DriveNode | null>(null);
 
   const handleLoadFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +107,14 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
       <ul className="tree-list">
         {nodes.map((node) => (
           <li key={node.id} className={`tree-item depth-${depth}`}>
-            <div className="file-item-row">
+            <div
+              className={`file-item-row ${isVideo(node) ? "clickable" : ""}`}
+              onClick={() => {
+                if (isVideo(node)) {
+                  setSelectedVideo(node);
+                }
+              }}
+            >
               <span className="file-icon">
                 {isFolder(node) ? "📁" : isVideo(node) ? "🎥" : "📄"}
               </span>
@@ -113,12 +122,14 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
                 <span className="file-name">{node.name}</span>
                 <span className="file-type">
                   {getFileType(node)}
-                  {node.size && !isFolder(node) &&
+                  {node.size &&
+                    !isFolder(node) &&
                     ` • ${formatFileSize(node.size)}`}
                 </span>
               </div>
             </div>
-            {node.children && node.children.length > 0 &&
+            {node.children &&
+              node.children.length > 0 &&
               renderTree(node.children, depth + 1)}
           </li>
         ))}
@@ -181,11 +192,17 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
               <p>Nenhum arquivo encontrado nesta pasta</p>
             </div>
           ) : (
-            <div className="files-list tree-view">
-              {renderTree(tree)}
-            </div>
+            <div className="files-list tree-view">{renderTree(tree)}</div>
           )}
         </div>
+      )}
+
+      {selectedVideo && (
+        <VideoPlayer
+          fileId={selectedVideo.id}
+          videoName={selectedVideo.name}
+          onClose={() => setSelectedVideo(null)}
+        />
       )}
     </div>
   );
