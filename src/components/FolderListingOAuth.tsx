@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useVideoProgress } from "../hooks/useVideoProgress";
 import type { DriveNode } from "../services/apiService";
 import {
   extractFolderIdFromUrl,
@@ -6,9 +7,8 @@ import {
   isVideo,
   listFolderTree,
 } from "../services/apiService";
-import { useVideoProgress } from "../hooks/useVideoProgress";
-import { VideoPlayer } from "./VideoPlayer";
 import "./FolderListingOAuth.css";
+import { VideoPlayer } from "./VideoPlayer";
 
 interface FolderListingOAuthProps {
   accessToken: string | null;
@@ -26,11 +26,8 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
   const [error, setError] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<DriveNode | null>(null);
 
-  const {
-    markInProgress,
-    markCompleted,
-    getVideoProgress,
-  } = useVideoProgress(userEmail);
+  const { markInProgress, markCompleted, getVideoProgress } =
+    useVideoProgress(userEmail);
 
   const handleLoadFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,20 +125,30 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
                 }}
               >
                 <span className="file-icon">
-                  {isCompleted ? "✅" : isFolder(node) ? "📁" : isVideo(node) ? "🎥" : "📄"}
+                  {isCompleted
+                    ? "✅"
+                    : isFolder(node)
+                      ? "📁"
+                      : isVideo(node)
+                        ? "🎥"
+                        : "📄"}
                 </span>
                 <div className="file-info">
-                  <span className={`file-name ${isCompleted ? "completed" : ""}`}>
+                  <span
+                    className={`file-name ${isCompleted ? "completed" : ""}`}
+                  >
                     {node.name}
                   </span>
                   <span className="file-type">
                     {getFileType(node)}
-                    {node.size && !isFolder(node) &&
+                    {node.size &&
+                      !isFolder(node) &&
                       ` • ${formatFileSize(node.size)}`}
                   </span>
                 </div>
               </div>
-              {node.children && node.children.length > 0 &&
+              {node.children &&
+                node.children.length > 0 &&
                 renderTree(node.children, depth + 1)}
             </li>
           );
@@ -205,9 +212,7 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
               <p>Nenhum arquivo encontrado nesta pasta</p>
             </div>
           ) : (
-            <div className="files-list tree-view">
-              {renderTree(tree)}
-            </div>
+            <div className="files-list tree-view">{renderTree(tree)}</div>
           )}
         </div>
       )}

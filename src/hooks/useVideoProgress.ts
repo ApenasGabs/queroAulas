@@ -24,55 +24,42 @@ export interface ProgressData {
 
 const STORAGE_KEY = "queroaulas_progress";
 
-export const useVideoProgress = (userId: string | undefined) => {
-  const [progressData, setProgressData] = useState<ProgressData | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+// Initialize state from localStorage
+const initializeProgress = (
+  userId: string | undefined,
+): ProgressData | null => {
+  if (!userId) return null;
 
-  // Load progress from localStorage
-  useEffect(() => {
-    if (!userId) {
-      setIsLoaded(true);
-      return;
-    }
-
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data = JSON.parse(stored) as ProgressData;
-        if (data.userId === userId) {
-          setProgressData(data);
-        } else {
-          // Different user, start fresh
-          const newData: ProgressData = {
-            userId,
-            videos: {},
-            updatedAt: new Date().toISOString(),
-          };
-          setProgressData(newData);
-        }
-      } else {
-        // First time
-        const newData: ProgressData = {
-          userId,
-          videos: {},
-          updatedAt: new Date().toISOString(),
-        };
-        setProgressData(newData);
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const data = JSON.parse(stored) as ProgressData;
+      if (data.userId === userId) {
+        return data;
       }
-    } catch (error) {
-      console.error("[useVideoProgress] Error loading from localStorage:", error);
-      const newData: ProgressData = {
-        userId,
-        videos: {},
-        updatedAt: new Date().toISOString(),
-      };
-      setProgressData(newData);
     }
+    // Different user or first time
+    return {
+      userId,
+      videos: {},
+      updatedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("[useVideoProgress] Error loading from localStorage:", error);
+    return {
+      userId: userId || "",
+      videos: {},
+      updatedAt: new Date().toISOString(),
+    };
+  }
+};
 
-    setIsLoaded(true);
-  }, [userId]);
+export const useVideoProgress = (userId: string | undefined) => {
+  const [progressData, setProgressData] = useState<ProgressData | null>(() =>
+    initializeProgress(userId),
+  );
 
-  // Save to localStorage whenever progressData changes
+  // Save to localStorage whenever progressData changes (effect only for syncing)
   useEffect(() => {
     if (!progressData || !userId) return;
 
@@ -109,7 +96,7 @@ export const useVideoProgress = (userId: string | undefined) => {
         updatedAt: now,
       });
     },
-    [progressData]
+    [progressData],
   );
 
   // Mark video as completed
@@ -136,7 +123,7 @@ export const useVideoProgress = (userId: string | undefined) => {
         updatedAt: now,
       });
     },
-    [progressData]
+    [progressData],
   );
 
   // Get video progress
@@ -144,7 +131,7 @@ export const useVideoProgress = (userId: string | undefined) => {
     (fileId: string): VideoProgress | undefined => {
       return progressData?.videos[fileId];
     },
-    [progressData]
+    [progressData],
   );
 
   // Get last video watched
@@ -163,7 +150,7 @@ export const useVideoProgress = (userId: string | undefined) => {
         return video.status === "completed";
       }).length;
     },
-    [progressData]
+    [progressData],
   );
 
   // Get total videos count
@@ -174,10 +161,10 @@ export const useVideoProgress = (userId: string | undefined) => {
       if (!folderId) return Object.keys(progressData.videos).length;
 
       return Object.values(progressData.videos).filter(
-        (video) => video.folderId === folderId
+        (video) => video.folderId === folderId,
       ).length;
     },
-    [progressData]
+    [progressData],
   );
 
   // Clear all progress
@@ -200,27 +187,25 @@ export const useVideoProgress = (userId: string | undefined) => {
 
       const filtered = Object.fromEntries(
         Object.entries(progressData.videos).filter(
-          ([, video]) => video.folderId !== folderId
-        )
+          ([, video]) => video.folderId !== folderId,
+        ),
       );
 
       setProgressData({
         ...progressData,
         videos: filtered,
         lastVideoFileId:
-          progressData.lastVideoFileId &&
-          filtered[progressData.lastVideoFileId]
+          progressData.lastVideoFileId && filtered[progressData.lastVideoFileId]
             ? progressData.lastVideoFileId
             : undefined,
         updatedAt: new Date().toISOString(),
       });
     },
-    [progressData]
+    [progressData],
   );
 
   return {
     progressData,
-    isLoaded,
     markInProgress,
     markCompleted,
     getVideoProgress,
