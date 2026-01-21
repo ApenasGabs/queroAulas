@@ -225,6 +225,7 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
           onMarkCompleted={() => {
             markCompleted(selectedVideo.id, selectedVideo.name, folderId);
           }}
+          accessToken={accessToken}
         />
       )}
     </div>
