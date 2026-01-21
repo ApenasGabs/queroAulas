@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
+import type { DriveNode } from "../services/apiService";
 import {
-  DriveNode,
   extractFolderIdFromUrl,
   isFolder,
   isVideo,
