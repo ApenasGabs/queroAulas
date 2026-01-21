@@ -62,6 +62,48 @@
   white-space: nowrap;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mark-completed-btn,
+.download-btn,
+.play-offline-btn {
+  background-color: #ff9800;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  color: white;
+  white-space: nowrap;
+}
+
+.mark-completed-btn {
+  background-color: #4caf50;
+}
+
+.mark-completed-btn:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+.download-btn:hover,
+.play-offline-btn:hover {
+  background-color: #fb8c00;
+}
+
+.download-btn:disabled,
+.play-offline-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .close-button {
   width: 40px;
   height: 40px;
@@ -70,6 +112,7 @@
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
   border: none;
+  padding: 0;
   border-radius: 8px;
   color: white;
   font-size: 24px;
@@ -79,8 +122,37 @@
 }
 
 .close-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #f44336;
   transform: scale(1.05);
+}
+
+.download-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.progress-bar-small {
+  height: 3px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #ff9800;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 30px;
+  text-align: right;
 }
 
 .video-element {
@@ -119,6 +191,52 @@
   margin: 0;
   font-size: 14px;
   font-weight: 500;
+}
+
+.iframe-error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  min-height: 300px;
+  color: white;
+}
+
+.iframe-error-message p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.iframe-error-message .error-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.iframe-error-message button {
+  padding: 10px 20px;
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.iframe-error-message button:hover:not(:disabled) {
+  background-color: #fb8c00;
+}
+
+.iframe-error-message button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .video-loading {
