@@ -6,6 +6,8 @@ import {
   isVideo,
   listFolderTree,
 } from "../services/apiService";
+import { useVideoProgress } from "../hooks/useVideoProgress";
+import { VideoPlayer } from "./VideoPlayer";
 import "./FolderListingOAuth.css";
 
 interface FolderListingOAuthProps {
@@ -22,6 +24,13 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
   const [tree, setTree] = useState<DriveNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedVideo, setSelectedVideo] = useState<DriveNode | null>(null);
+
+  const {
+    markInProgress,
+    markCompleted,
+    getVideoProgress,
+  } = useVideoProgress(userEmail);
 
   const handleLoadFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,25 +112,40 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
   const renderTree = (nodes: DriveNode[], depth = 0) => {
     return (
       <ul className="tree-list">
-        {nodes.map((node) => (
-          <li key={node.id} className={`tree-item depth-${depth}`}>
-            <div className="file-item-row">
-              <span className="file-icon">
-                {isFolder(node) ? "📁" : isVideo(node) ? "🎥" : "📄"}
-              </span>
-              <div className="file-info">
-                <span className="file-name">{node.name}</span>
-                <span className="file-type">
-                  {getFileType(node)}
-                  {node.size && !isFolder(node) &&
-                    ` • ${formatFileSize(node.size)}`}
+        {nodes.map((node) => {
+          const progress = getVideoProgress(node.id);
+          const isCompleted = progress?.status === "completed";
+
+          return (
+            <li key={node.id} className={`tree-item depth-${depth}`}>
+              <div
+                className={`file-item-row ${isVideo(node) ? "clickable" : ""}`}
+                onClick={() => {
+                  if (isVideo(node)) {
+                    markInProgress(node.id, node.name, folderId);
+                    setSelectedVideo(node);
+                  }
+                }}
+              >
+                <span className="file-icon">
+                  {isCompleted ? "✅" : isFolder(node) ? "📁" : isVideo(node) ? "🎥" : "📄"}
                 </span>
+                <div className="file-info">
+                  <span className={`file-name ${isCompleted ? "completed" : ""}`}>
+                    {node.name}
+                  </span>
+                  <span className="file-type">
+                    {getFileType(node)}
+                    {node.size && !isFolder(node) &&
+                      ` • ${formatFileSize(node.size)}`}
+                  </span>
+                </div>
               </div>
-            </div>
-            {node.children && node.children.length > 0 &&
-              renderTree(node.children, depth + 1)}
-          </li>
-        ))}
+              {node.children && node.children.length > 0 &&
+                renderTree(node.children, depth + 1)}
+            </li>
+          );
+        })}
       </ul>
     );
   };
@@ -186,6 +210,17 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {selectedVideo && (
+        <VideoPlayer
+          fileId={selectedVideo.id}
+          videoName={selectedVideo.name}
+          onClose={() => setSelectedVideo(null)}
+          onMarkCompleted={() => {
+            markCompleted(selectedVideo.id, selectedVideo.name, folderId);
+          }}
+        />
       )}
     </div>
   );
