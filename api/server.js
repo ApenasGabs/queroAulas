@@ -32,6 +32,23 @@ app.use(
 
 app.use(express.json());
 
+// Security headers para OAuth e iframes
+app.use((req, res, next) => {
+  // Permitir OAuth popup do Google
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+
+  // CSP para permitir Google Drive iframe e OAuth
+  res.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors 'self' https://accounts.google.com https://drive.google.com; " +
+      "frame-src 'self' https://accounts.google.com https://drive.google.com; " +
+      "connect-src 'self' https://accounts.google.com https://www.googleapis.com https://drive.google.com",
+  );
+
+  next();
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/drive", driveRoutes);
