@@ -23,6 +23,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [isIframeError, setIsIframeError] = useState(false);
   const [downloadError, setDownloadError] = useState<string>("");
+  const [showDownloadButton, setShowDownloadButton] = useState(false);
 
   const {
     isDownloading,
@@ -37,6 +38,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     loadCachedVideos();
   }, [loadCachedVideos]);
+
+  // Timer para mostrar botão de download após 10 segundos
+  useEffect(() => {
+    if (!isLoading) return; // Se já carregou, cancelar timer
+
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+
+      if (elapsed >= 10) {
+        setShowDownloadButton(true);
+        clearInterval(timer);
+      }
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, [isLoading]);
 
   // Google Drive embed URL
   const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
@@ -141,7 +159,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </div>
             )}
 
-            {(isIframeError || isVideoCached(fileId)) && (
+            {(isIframeError || isVideoCached(fileId) || showDownloadButton) && (
               <button
                 className="play-offline-btn"
                 onClick={handleDownloadAndPlay}
@@ -208,7 +226,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             className="video-iframe"
             allow="autoplay; fullscreen; encrypted-media"
             allowFullScreen
-            onLoad={() => setIsLoading(false)}
+            onLoad={() => {
+              setIsLoading(false);
+              setShowDownloadButton(false);
+            }}
             onError={handleIframeError}
             title={videoName}
           />
