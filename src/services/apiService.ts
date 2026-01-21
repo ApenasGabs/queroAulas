@@ -31,6 +31,10 @@ interface DriveFile {
   modifiedTime?: string;
 }
 
+export interface DriveNode extends DriveFile {
+  children?: DriveNode[];
+}
+
 /**
  * Verify ID token (via backend) - Usado para auth-code flow no futuro
  * Por enquanto, usamos implicit flow que obtém access_token diretamente
@@ -111,6 +115,28 @@ export const listFolderContents = async (
 
   const data = await response.json();
   return data.files;
+};
+
+export const listFolderTree = async (
+  folderId: string,
+  accessToken: string,
+): Promise<DriveNode[]> => {
+  const response = await fetch(`${API_URL}/drive/list-recursive`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ folderId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to list folder tree");
+  }
+
+  const data = await response.json();
+  return data.tree;
 };
 
 /**
