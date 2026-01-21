@@ -1,4 +1,5 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { Analytics } from "@vercel/analytics/react";
 import "./App.css";
 import { FolderListingOAuth } from "./components/FolderListingOAuth";
 import { SimpleGoogleLogin } from "./components/SimpleGoogleLogin";
@@ -83,6 +84,7 @@ function App() {
     <GoogleOAuthProvider clientId={clientId}>
       <GoogleAuthProvider>
         <AppContent />
+        <Analytics />
       </GoogleAuthProvider>
     </GoogleOAuthProvider>
   );
