@@ -195,6 +195,31 @@ export const isVideo = (file: DriveFile): boolean => {
     "video/x-msvideo",
     "video/x-matroska",
     "video/webm",
+    "video/MP2T", // MPEG transport stream
+    "video/mp2t",
   ];
-  return videoMimeTypes.includes(file.mimeType);
+
+  // Check by mimeType first
+  if (videoMimeTypes.includes(file.mimeType)) {
+    return true;
+  }
+
+  // Fallback: check by file extension
+  const videoExtensions = [
+    ".mp4",
+    ".mpeg",
+    ".mpg",
+    ".mov",
+    ".avi",
+    ".mkv",
+    ".webm",
+    ".ts",
+    ".m2ts",
+    ".mts",
+    ".flv",
+    ".wmv",
+  ];
+
+  const fileName = file.name.toLowerCase();
+  return videoExtensions.some((ext) => fileName.endsWith(ext));
 };

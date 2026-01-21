@@ -4,7 +4,8 @@ const router = express.Router();
 
 const FOLDER_ID_REGEX = /^[a-zA-Z0-9_-]{25,50}$/;
 
-const isFolder = (mimeType) => mimeType === "application/vnd.google-apps.folder";
+const isFolder = (mimeType) =>
+  mimeType === "application/vnd.google-apps.folder";
 
 const naturalCompare = (a, b) =>
   a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
@@ -52,10 +53,10 @@ router.post("/list", authenticateRequest, async (req, res) => {
 
     // Build query
     const query = encodeURIComponent(
-      `'${folderId}' in parents and trashed = false`
+      `'${folderId}' in parents and trashed = false`,
     );
     const fields = encodeURIComponent(
-      "files(id, name, mimeType, webViewLink, webContentLink, size, modifiedTime, thumbnailLink)"
+      "files(id, name, mimeType, webViewLink, webContentLink, size, modifiedTime, thumbnailLink)",
     );
 
     const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=folder,name&pageSize=1000`;
@@ -174,7 +175,8 @@ router.post("/list-recursive", authenticateRequest, async (req, res) => {
           ? "Pasta não encontrada"
           : "Erro ao listar conteúdo da pasta",
       code: error.code,
-      message: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });
@@ -188,7 +190,7 @@ router.get("/file/:fileId", authenticateRequest, async (req, res) => {
     const { fileId } = req.params;
 
     const fields = encodeURIComponent(
-      "id, name, mimeType, size, modifiedTime, webViewLink, webContentLink, thumbnailLink, parents"
+      "id, name, mimeType, size, modifiedTime, webViewLink, webContentLink, thumbnailLink, parents",
     );
 
     const url = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=${fields}`;
