@@ -2,6 +2,24 @@ import express from "express";
 
 const router = express.Router();
 
+const FOLDER_ID_REGEX = /^[a-zA-Z0-9_-]{25,50}$/;
+
+const isFolder = (mimeType) => mimeType === "application/vnd.google-apps.folder";
+
+const naturalCompare = (a, b) =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+
+const sanitizeFile = (file) => ({
+  id: file.id,
+  name: file.name,
+  mimeType: file.mimeType,
+  webViewLink: file.webViewLink,
+  webContentLink: file.webContentLink,
+  thumbnailLink: file.thumbnailLink,
+  size: file.size,
+  modifiedTime: file.modifiedTime,
+});
+
 /**
  * Simple auth middleware to check for access token
  */
@@ -12,7 +30,7 @@ const authenticateRequest = (req, res, next) => {
     return res.status(401).json({ error: "Unauthorized - No token provided" });
   }
 
-  req.accessToken = authHeader.substring(7); // Remove "Bearer " prefix
+  req.accessToken = authHeader.substring(7);
   next();
 };
 
@@ -28,8 +46,6 @@ router.post("/list", authenticateRequest, async (req, res) => {
       return res.status(400).json({ error: "Folder ID is required" });
     }
 
-    // Validate folder ID format
-    const FOLDER_ID_REGEX = /^[a-zA-Z0-9_-]{25,50}$/;
     if (!FOLDER_ID_REGEX.test(folderId)) {
       return res.status(400).json({ error: "Invalid folder ID format" });
     }
@@ -44,7 +60,6 @@ router.post("/list", authenticateRequest, async (req, res) => {
 
     const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=folder,name&pageSize=1000`;
 
-    // Call Google Drive API
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -78,19 +93,10 @@ router.post("/list", authenticateRequest, async (req, res) => {
 
     const data = await response.json();
 
-    // Filter and sanitize response
     const files = (data.files || [])
       .filter((file) => file.id && file.name && file.mimeType)
-      .map((file) => ({
-        id: file.id,
-        name: file.name,
-        mimeType: file.mimeType,
-        webViewLink: file.webViewLink,
-        webContentLink: file.webContentLink,
-        thumbnailLink: file.thumbnailLink,
-        size: file.size,
-        modifiedTime: file.modifiedTime,
-      }));
+      .sort((a, b) => naturalCompare(a.name, b.name))
+      .map(sanitizeFile);
 
     res.json({ files });
   } catch (error) {
@@ -99,6 +105,76 @@ router.post("/list", authenticateRequest, async (req, res) => {
       error: "Erro ao listar conteúdo da pasta",
       message:
         process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+const listFolderRecursive = async (folderId, accessToken, depth = 0) => {
+  const query = encodeURIComponent(
+    `'${folderId}' in parents and trashed = false`,
+  );
+  const fields = encodeURIComponent(
+    "files(id, name, mimeType, webViewLink, webContentLink, size, modifiedTime, thumbnailLink)",
+  );
+  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=folder,name&pageSize=1000`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    const err = new Error(error.error?.message || "Failed to list folder");
+    err.code = error.error?.code;
+    throw err;
+  }
+
+  const data = await response.json();
+  const items = (data.files || [])
+    .filter((file) => file.id && file.name && file.mimeType)
+    .sort((a, b) => naturalCompare(a.name, b.name))
+    .map(sanitizeFile);
+
+  const childrenPromises = items.map(async (item) => {
+    if (!isFolder(item.mimeType)) return item;
+    const nested = await listFolderRecursive(item.id, accessToken, depth + 1);
+    return { ...item, children: nested };
+  });
+
+  return Promise.all(childrenPromises);
+};
+
+router.post("/list-recursive", authenticateRequest, async (req, res) => {
+  try {
+    const { folderId } = req.body;
+
+    if (!folderId) {
+      return res.status(400).json({ error: "Folder ID is required" });
+    }
+
+    if (!FOLDER_ID_REGEX.test(folderId)) {
+      return res.status(400).json({ error: "Invalid folder ID format" });
+    }
+
+    const tree = await listFolderRecursive(folderId, req.accessToken);
+    res.json({ tree });
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[Drive Recursive Error]", error);
+    }
+
+    const status = error.code === 404 ? 404 : 500;
+    res.status(status).json({
+      error:
+        error.code === 404
+          ? "Pasta não encontrada"
+          : "Erro ao listar conteúdo da pasta",
+      code: error.code,
+      message: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });

@@ -1,22 +1,12 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import type { DriveNode } from "../services/apiService";
 import {
   extractFolderIdFromUrl,
   isFolder,
   isVideo,
-  listFolderContents,
+  listFolderTree,
 } from "../services/apiService";
 import "./FolderListingOAuth.css";
-
-interface DriveFile {
-  id: string;
-  name: string;
-  mimeType: string;
-  webViewLink?: string;
-  webContentLink?: string;
-  thumbnailLink?: string;
-  size?: string;
-  modifiedTime?: string;
-}
 
 interface FolderListingOAuthProps {
   accessToken: string | null;
@@ -29,7 +19,7 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
 }) => {
   const [input, setInput] = useState("");
   const [folderId, setFolderId] = useState<string>("");
-  const [files, setFiles] = useState<DriveFile[]>([]);
+  const [tree, setTree] = useState<DriveNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,7 +33,7 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
 
     setIsLoading(true);
     setError("");
-    setFiles([]);
+    setTree([]);
 
     try {
       // Extract folder ID from input (handle both URLs and plain IDs)
@@ -63,15 +53,12 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
 
       setFolderId(id);
 
-      // Load files using access token (real OAuth token)
-      const fileList = await listFolderContents(id, accessToken);
-      setFiles(fileList);
-      console.log("[FolderListingOAuth] loaded files", fileList);
+      const fileTree = await listFolderTree(id, accessToken);
+      setTree(fileTree);
     } catch (err) {
       const error = err as Error;
-      console.error("[FolderListingOAuth] Error:", err);
       setError(error.message || "Erro ao carregar pasta");
-      setFiles([]);
+      setTree([]);
     } finally {
       setIsLoading(false);
     }
@@ -87,15 +74,57 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
     return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
-  const getFileType = (file: DriveFile): string => {
+  const getFileType = (file: DriveNode): string => {
     if (isFolder(file)) return "Pasta";
     if (isVideo(file)) return "Vídeo";
     return "Arquivo";
   };
 
-  const folders = files.filter(isFolder);
-  const videos = files.filter(isVideo);
-  const others = files.filter((f) => !isFolder(f) && !isVideo(f));
+  const counts = useMemo(() => {
+    const recurse = (nodes: DriveNode[]) =>
+      nodes.reduce(
+        (acc, node) => {
+          if (isFolder(node)) acc.folders += 1;
+          else if (isVideo(node)) acc.videos += 1;
+          else acc.others += 1;
+          if (node.children?.length) {
+            const nested = recurse(node.children);
+            acc.folders += nested.folders;
+            acc.videos += nested.videos;
+            acc.others += nested.others;
+          }
+          return acc;
+        },
+        { folders: 0, videos: 0, others: 0 },
+      );
+    return recurse(tree);
+  }, [tree]);
+
+  const renderTree = (nodes: DriveNode[], depth = 0) => {
+    return (
+      <ul className="tree-list">
+        {nodes.map((node) => (
+          <li key={node.id} className={`tree-item depth-${depth}`}>
+            <div className="file-item-row">
+              <span className="file-icon">
+                {isFolder(node) ? "📁" : isVideo(node) ? "🎥" : "📄"}
+              </span>
+              <div className="file-info">
+                <span className="file-name">{node.name}</span>
+                <span className="file-type">
+                  {getFileType(node)}
+                  {node.size && !isFolder(node) &&
+                    ` • ${formatFileSize(node.size)}`}
+                </span>
+              </div>
+            </div>
+            {node.children && node.children.length > 0 &&
+              renderTree(node.children, depth + 1)}
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
     <div className="folder-listing-container">
@@ -139,76 +168,21 @@ export const FolderListingOAuth: React.FC<FolderListingOAuthProps> = ({
           <div className="section-header">
             <h2>Conteúdo da Pasta</h2>
             <span className="file-count">
-              {folders.length} pasta{folders.length !== 1 ? "s" : ""} •
-              {videos.length} vídeo{videos.length !== 1 ? "s" : ""}
-              {others.length > 0 &&
-                ` • ${others.length} outro${others.length !== 1 ? "s" : ""}`}
+              {counts.folders} pasta{counts.folders !== 1 ? "s" : ""} •
+              {counts.videos} vídeo{counts.videos !== 1 ? "s" : ""}
+              {counts.others > 0 &&
+                ` • ${counts.others} outro${counts.others !== 1 ? "s" : ""}`}
             </span>
           </div>
 
-          {files.length === 0 ? (
+          {tree.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">📭</span>
               <p>Nenhum arquivo encontrado nesta pasta</p>
             </div>
           ) : (
-            <div className="files-list">
-              {folders.length > 0 && (
-                <div className="file-group">
-                  <h3>📁 Pastas ({folders.length})</h3>
-                  <ul>
-                    {folders.map((file) => (
-                      <li key={file.id} className="file-item folder">
-                        <span className="file-icon">📁</span>
-                        <div className="file-info">
-                          <span className="file-name">{file.name}</span>
-                          <span className="file-type">{getFileType(file)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {videos.length > 0 && (
-                <div className="file-group">
-                  <h3>🎥 Vídeos ({videos.length})</h3>
-                  <ul>
-                    {videos.map((file) => (
-                      <li key={file.id} className="file-item video">
-                        <span className="file-icon">🎥</span>
-                        <div className="file-info">
-                          <span className="file-name">{file.name}</span>
-                          <span className="file-type">
-                            {getFileType(file)}
-                            {file.size && ` • ${formatFileSize(file.size)}`}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {others.length > 0 && (
-                <div className="file-group">
-                  <h3>📄 Outros ({others.length})</h3>
-                  <ul>
-                    {others.map((file) => (
-                      <li key={file.id} className="file-item other">
-                        <span className="file-icon">📄</span>
-                        <div className="file-info">
-                          <span className="file-name">{file.name}</span>
-                          <span className="file-type">
-                            {file.mimeType}
-                            {file.size && ` • ${formatFileSize(file.size)}`}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            <div className="files-list tree-view">
+              {renderTree(tree)}
             </div>
           )}
         </div>
